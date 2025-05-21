@@ -83,27 +83,37 @@ class Card:
                 conn.commit()
                 print('Income was added!')
             elif i == 3:
-                print('\nTransfer\nEnter card number:')
-                receiver_card = input()
-                cur.execute(f'SELECT id, number,pin,balance FROM card WHERE number = {receiver_card};')
-
-                if not self.luhn_2(receiver_card):
-                    print('Probably you made a mistake in the card number. Please try again!')
-                elif not cur.fetchone():
-                    print('Such a card does not exist.')
-                else:
-                    transfer = int(input("Enter how much money you want to transfer:\n"))
-                    if transfer > self.balance:
-                        print("Not enough money!")
-                    else:
-                        self.balance -= transfer
-                        cur.execute(f'UPDATE card SET balance = {self.balance} WHERE number = {self.login_card};')
-                        self.receiver_balance += transfer
-                        cur.execute(f'UPDATE card SET balance = {self.receiver_balance} WHERE number = {receiver_card};')
-                        cur.execute(f'SELECT * FROM card WHERE number = {self.login_card}')
-                        print(cur.fetchone())
-                        print("Success!")
-                        conn.commit()
+    print('\nTransfer\nEnter card number:')
+    receiver_card = input()
+    
+    if not self.luhn_2(receiver_card):
+        print('Probably you made a mistake in the card number. Please try again!')
+    else:
+        # First check if card exists and get its current balance
+        cur.execute(f'SELECT balance FROM card WHERE number = {receiver_card};')
+        receiver_row = cur.fetchone()
+        
+        if not receiver_row:
+            print('Such a card does not exist.')
+        else:
+            transfer = int(input("Enter how much money you want to transfer:\n"))
+            if transfer > self.balance:
+                print("Not enough money!")
+            else:
+                # Get the current receiver balance from the query result
+                receiver_balance = receiver_row[0]
+                
+                # Update sender balance
+                self.balance -= transfer
+                cur.execute(f'UPDATE card SET balance = {self.balance} WHERE number = {self.login_card};')
+                
+                # Update receiver balance with the current balance + transfer amount
+                receiver_balance += transfer
+                cur.execute(f'UPDATE card SET balance = {receiver_balance} WHERE number = {receiver_card};')
+                
+                conn.commit()
+                print("Success!")
+                
 
             elif i == 4:
                 cur.execute(f"DELETE FROM card WHERE number = {self.login_card}")
